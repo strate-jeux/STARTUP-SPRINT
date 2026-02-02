@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>START-UP SPRINT</title>
+
+  <!-- Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap" rel="stylesheet">
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo" aria-hidden="true">S</div>
+      <div>
+        <div class="title">START-UP SPRINT</div>
+        <div class="subtitle">Battle créative de start-ups • Tournoi 1v1 • Vote en 5 critères</div>
+      </div>
+    </div>
+
+    <div class="top-actions">
+      <button class="btn ghost" id="btnReset" type="button">Réinitialiser</button>
+    </div>
+  </header>
+
+  <main class="container">
+
+    <!-- SCREEN: SETUP -->
+    <section id="screenSetup" class="screen">
+      <div class="panel">
+        <h1>1) Création des start-ups</h1>
+        <p class="muted">
+          Ajoute jusqu’à 16 start-ups. Renseigne le nom, puis sélectionne un thème, une cible et une contrainte (facultative).
+        </p>
+
+        <div class="toolbar">
+          <button class="btn primary" id="btnAdd" type="button">+ Ajouter une start-up</button>
+          <button class="btn" id="btnDemo" type="button">Remplir un exemple</button>
+          <div class="spacer"></div>
+          <button class="btn danger" id="btnClear" type="button">Vider la liste</button>
+        </div>
+
+        <div id="startupList" class="grid" aria-live="polite"></div>
+
+        <div class="footerbar">
+          <div class="note">
+            Les duels se font 2 à 2. S’il reste une start-up seule sur un tour, elle passe automatiquement au tour suivant.
+          </div>
+          <button class="btn primary big" id="btnStart" type="button">Lancer les matchs</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- SCREEN: ROUND -->
+    <section id="screenRound" class="screen hidden">
+      <div class="panel">
+        <div class="round-head">
+          <div>
+            <h1 id="roundTitle">Tour 1</h1>
+            <p class="muted">
+              Clique sur “Voter” pour chaque duel, puis valide le match. Quand tous les matchs sont validés, passe au tour suivant.
+            </p>
+          </div>
+
+          <div class="round-actions">
+            <button class="btn" id="btnBack" type="button">Retour création</button>
+            <button class="btn primary" id="btnNextRound" type="button" disabled>Passer au tour suivant</button>
+          </div>
+        </div>
+
+        <div id="matches" class="matches" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <!-- SCREEN: WINNER -->
+    <section id="screenWinner" class="screen hidden">
+      <div class="panel center">
+        <h1>🏁 Résultat final</h1>
+        <p class="muted">La gagnante de <strong>START-UP SPRINT</strong> est :</p>
+
+        <div id="winnerCard" class="winner-card" aria-live="polite"></div>
+
+        <div class="toolbar center">
+          <button class="btn primary" id="btnRestart" type="button">Recommencer un tournoi</button>
+          <button class="btn" id="btnBackSetup" type="button">Retour au setup</button>
+        </div>
+
+        <div class="confetti" aria-hidden="true"></div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- MODAL: VOTE MATCH -->
+  <div id="modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-card">
+      <div class="modal-head">
+        <div>
+          <div class="modal-title" id="modalTitle">Vote du match</div>
+          <div class="muted" id="modalSubtitle"></div>
+        </div>
+        <button class="btn ghost" id="btnClose" type="button">Fermer</button>
+      </div>
+
+      <div id="modalBody" class="modal-body"></div>
+
+      <div class="modal-foot">
+        <div class="muted" id="modalStatus"></div>
+        <div class="spacer"></div>
+        <button class="btn" id="btnCancel" type="button">Annuler</button>
+        <button class="btn primary" id="btnValidate" type="button" disabled>Valider le match</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+
+  <!-- App -->
+  <script src="script.js"></script>
+</body>
+</html>
