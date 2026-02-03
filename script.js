@@ -17,23 +17,23 @@ const CRITERES = [
 const ICONS = {
   theme: {
     "Sport": "assets/items/theme-sport.png",
-    "Divertissement": "assets/items/theme-divertissement.PNG",
-    "Santé": "assets/items/theme-sante.PNG",
-    "Quotidien": "assets/items/theme-quotidien.PNG",
-    "Nature": "assets/items/theme-nature.PNG",
+    "Divertissement": "assets/items/theme-divertissement.png",
+    "Santé": "assets/items/theme-sante.png",
+    "Quotidien": "assets/items/theme-quotidien.png",
+    "Nature": "assets/items/theme-nature.png",
   },
   cible: {
-    "Retraités": "assets/items/cible-retraites.PNG",  // ⚠️ sans accent recommandé
-    "Étudiants": "assets/items/cible-etudiants.PNG",
-    "Familles avec jeunes enfants": "assets/items/cible-familles.PNG",
-    "Cadres dynamiques": "assets/items/cible-cadres.PNG",
-    "Jeunes urbains créatifs": "assets/items/cible-jeunes-urbains.PNG",
+    "Retraités": "assets/items/cible-retraites.png",  // ⚠️ sans accent recommandé
+    "Étudiants": "assets/items/cible-etudiants.png",
+    "Familles avec jeunes enfants": "assets/items/cible-familles.png",
+    "Cadres dynamiques": "assets/items/cible-cadres.png",
+    "Jeunes urbains créatifs": "assets/items/cible-jeunes-urbains.png",
   },
   contrainte: {
-    "Plateforme numérique": "assets/items/contrainte-plateforme.PNG",
-    "Moins de 10 €": "assets/items/contrainte-10e.PNG",
-    "Co-conception avec les utilisateurs": "assets/items/contrainte-coconception.PNG",
-    "Technologie innovante": "assets/items/contrainte-tech.PNG",
+    "Plateforme numérique": "assets/items/contrainte-plateforme.png",
+    "Moins de 10 €": "assets/items/contrainte-10e.png",
+    "Co-conception avec les utilisateurs": "assets/items/contrainte-coconception.png",
+    "Technologie innovante": "assets/items/contrainte-tech.png",
     "Aucune": ""
   }
 };
