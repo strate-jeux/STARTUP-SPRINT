@@ -16,7 +16,7 @@ const CRITERES = [
 // Ici, on suppose que tes images sont dans /assets/ (comme sur ta capture)
 const ICONS = {
   theme: {
-    "Sport": "assets/items/theme-sport.PNG",
+    "Sport": "assets/items/theme-sport.png",
     "Divertissement": "assets/items/theme-divertissement.PNG",
     "Santé": "assets/items/theme-sante.PNG",
     "Quotidien": "assets/items/theme-quotidien.PNG",
