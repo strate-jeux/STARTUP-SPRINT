@@ -252,6 +252,23 @@ h1{
   gap: 16px;
 }
 
+.winner-badge{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: rgba(34,197,94,.20);
+  border: 1px solid rgba(34,197,94,.55);
+  color: rgba(234,240,255,.98);
+  font-weight: 900;
+  font-size: 13px;
+  letter-spacing: .2px;
+  max-width: 100%;
+  text-align:center;
+}
+
+
 /* Match layout: left vs right */
 .match{
   border: 1px solid rgba(255,255,255,.14);
