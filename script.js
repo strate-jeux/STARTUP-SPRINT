@@ -9,10 +9,11 @@ const CRITERES = [
   ["Adéquation à la cible", "Quelle start-up répond le mieux aux besoins de sa cible ?"],
   ["Faisabilité", "Laquelle semble la plus réaliste à lancer concrètement ?"],
   ["Modèle économique", "Laquelle a le meilleur potentiel pour gagner de l’argent ?"],
-  ["Impact", "Laquelle a l’impact le plus positif (social, environnemental ou collectif) ?"]
+  ["Impact", "Laquelle a l’impact le plus positif (social, environnemental, sociétal) ?"]
 ];
 
-// --- Assets (you add the images in your repo) ---
+// ⚠️ Adapte ces chemins si tes fichiers sont ailleurs.
+// Ici, on suppose que tes images sont dans /assets/ (comme sur ta capture)
 const ICONS = {
   theme: {
     "Sport": "assets/items/theme-sport.png",
@@ -22,7 +23,7 @@ const ICONS = {
     "Nature": "assets/items/theme-nature.png",
   },
   cible: {
-    "Retraités": "assets/items/cible-retraites.png",
+    "Retraités": "assets/items/cible-retraites.png",  // ⚠️ sans accent recommandé
     "Étudiants": "assets/items/cible-etudiants.png",
     "Familles avec jeunes enfants": "assets/items/cible-familles.png",
     "Cadres dynamiques": "assets/items/cible-cadres.png",
@@ -34,11 +35,6 @@ const ICONS = {
     "Co-conception avec les utilisateurs": "assets/items/contrainte-coconception.png",
     "Technologie innovante": "assets/items/contrainte-tech.png",
     "Aucune": ""
-  },
-  badge: {
-    cible: "assets/badges/badge-cible.svg",
-    theme: "assets/badges/badge-theme.svg",
-    contrainte: "assets/badges/badge-contrainte.svg"
   }
 };
 
@@ -46,15 +42,14 @@ let startups = [];
 let currentRound = [];
 let roundIndex = 1;
 
-// per match results (store score)
-let matchResults = []; // { roundIndex, aName, bName, scoreA, scoreB, winnerName, loserName }
-let semifinalLosers = []; // for podium 3rd place ex-aequo
-let lastFinal = null; // for podium: final match result
-
 let winners = [];
-let currentMatch = null; // {a,b, idx, scores, picks[], step}
+let currentMatch = null;
 
-/* -------- DOM -------- */
+// Résultats par match (pour affichage score + état terminé)
+let matchResults = []; // { roundIndex, matchIdx, aName, bName, scoreA, scoreB, winnerName, loserName }
+let semifinalLosers = [];
+let lastFinal = null;
+
 const $ = (id) => document.getElementById(id);
 
 function show(screenId) {
@@ -66,10 +61,10 @@ function toast(msg) {
   const t = $("toast");
   t.textContent = msg;
   t.classList.remove("hidden");
-  setTimeout(() => t.classList.add("hidden"), 1800);
+  setTimeout(() => t.classList.add("hidden"), 1700);
 }
 
-/* -------- Setup (cards) -------- */
+/* -------- Setup -------- */
 function addStartup(data = {}) {
   if (startups.length >= MAX) return;
   startups.push({
@@ -81,33 +76,27 @@ function addStartup(data = {}) {
   renderStartups();
 }
 
-function iconForTheme(theme) {
-  return ICONS.theme[theme] || "";
-}
-function iconForCible(cible) {
-  return ICONS.cible[cible] || "";
-}
-function iconForContrainte(con) {
-  return ICONS.contrainte[con] || "";
-}
+function iconForTheme(theme) { return ICONS.theme[theme] || ""; }
+function iconForCible(cible) { return ICONS.cible[cible] || ""; }
+function iconForContrainte(con) { return ICONS.contrainte[con] || ""; }
 
 function renderIconChips(s) {
   const con = s.contrainte;
   return `
     <div class="icon-row">
       <div class="chip theme" title="Thème">
+        <span>${escapeHtml(s.theme)}</span>
         <img alt="" src="${iconForTheme(s.theme)}">
-        <span>${s.theme}</span>
       </div>
       <div class="chip cible" title="Cible">
+        <span>${escapeHtml(s.cible)}</span>
         <img alt="" src="${iconForCible(s.cible)}">
-        <span>${s.cible}</span>
       </div>
       ${
         con !== "Aucune"
           ? `<div class="chip contrainte" title="Contrainte">
+               <span>${escapeHtml(con)}</span>
                <img alt="" src="${iconForContrainte(con)}">
-               <span>${con}</span>
              </div>`
           : ``
       }
@@ -143,8 +132,7 @@ function renderStartups() {
       <select>${CONTRAINTES.map(c => `<option ${c===s.contrainte?"selected":""}>${c}</option>`).join("")}</select>
     `;
 
-    const delBtn = div.querySelector("[data-del]");
-    delBtn.onclick = () => {
+    div.querySelector("[data-del]").onclick = () => {
       startups.splice(i, 1);
       renderStartups();
     };
@@ -164,8 +152,7 @@ function renderStartups() {
   });
 }
 
-/* -------- Tournament logic (simple 1v1 rounds) -------- */
-
+/* -------- Tournament -------- */
 function startTournament() {
   const valid = startups
     .map(s => ({...s, name: (s.name || "").trim()}))
@@ -176,7 +163,6 @@ function startTournament() {
     return;
   }
 
-  // reset tournament state
   currentRound = shuffle([...valid]);
   winners = [];
   matchResults = [];
@@ -196,13 +182,13 @@ function renderRound() {
   m.innerHTML = "";
   winners = [];
 
-  // build matches
   for (let i = 0; i < currentRound.length; i += 2) {
     const a = currentRound[i];
     const b = currentRound[i + 1];
 
     const wrap = document.createElement("div");
     wrap.className = "match";
+    wrap.id = `match-${roundIndex}-${i}`;
 
     if (!b) {
       winners.push(a);
@@ -231,10 +217,14 @@ function renderRound() {
       continue;
     }
 
-    // find existing result (if re-render)
-    const existing = matchResults.find(r => r.roundIndex === roundIndex && r.aName === a.name && r.bName === b.name);
+    const existing = matchResults.find(r => r.roundIndex === roundIndex && r.matchIdx === i);
 
     const scoreText = existing ? `${existing.scoreA}–${existing.scoreB}` : `0–0`;
+    const doneTag = existing
+  ? `<div class="done-tag">Terminé</div>
+     <div class="winner-badge">Gagnant : ${escapeHtml(existing.winnerName)}</div>`
+  : `<div class="smallmuted">5 critères</div>`;
+
 
     wrap.innerHTML = `
       <div class="match-grid">
@@ -246,7 +236,7 @@ function renderRound() {
         <div class="vs">
           <div class="label">VS</div>
           <div class="score-pill" id="score-${roundIndex}-${i}">${scoreText}</div>
-          <div class="smallmuted">5 critères</div>
+          ${doneTag}
         </div>
 
         <div class="side">
@@ -256,34 +246,43 @@ function renderRound() {
       </div>
 
       <div class="match-foot">
-        <div class="smallmuted">Clique pour voter sur ce duel</div>
-        <button class="btn primary" type="button" id="vote-${roundIndex}-${i}">
-          Lancer le vote (diapo)
+        <div class="smallmuted">${existing ? "Match terminé" : "Clique pour voter sur ce duel"}</div>
+        <button class="btn primary" type="button" id="vote-${roundIndex}-${i}" ${existing ? "disabled" : ""}>
+          ${existing ? "Voté" : "Voter"}
         </button>
       </div>
     `;
 
-    wrap.querySelector(`#vote-${roundIndex}-${i}`).onclick = () => openVote(a, b, i);
+    if (existing) {
+      wrap.classList.add("done");
+    } else {
+      wrap.querySelector(`#vote-${roundIndex}-${i}`).onclick = () => openVote(a, b, i);
+    }
+
     m.appendChild(wrap);
   }
 
-  // If all matches are BYE (rare), enable next
   maybeEnableNextRound();
 }
 
 function miniBadges(s) {
   const con = s.contrainte;
   const conHtml = con !== "Aucune"
-    ? `<span class="chip contrainte" style="padding:8px 10px"><img alt="" src="${iconForContrainte(con)}"><span>${con}</span></span>`
+    ? `<span class="chip contrainte" style="padding:10px 12px; min-width:160px">
+         <span>${escapeHtml(con)}</span>
+         <img alt="" src="${iconForContrainte(con)}">
+       </span>`
     : "";
 
   return `
-    <div class="mini" style="display:flex; gap:10px; flex-wrap:wrap">
-      <span class="chip theme" style="padding:8px 10px">
-        <img alt="" src="${iconForTheme(s.theme)}"><span>${s.theme}</span>
+    <div class="mini">
+      <span class="chip theme" style="padding:10px 12px; min-width:160px">
+        <span>${escapeHtml(s.theme)}</span>
+        <img alt="" src="${iconForTheme(s.theme)}">
       </span>
-      <span class="chip cible" style="padding:8px 10px">
-        <img alt="" src="${iconForCible(s.cible)}"><span>${s.cible}</span>
+      <span class="chip cible" style="padding:10px 12px; min-width:160px">
+        <span>${escapeHtml(s.cible)}</span>
+        <img alt="" src="${iconForCible(s.cible)}">
       </span>
       ${conHtml}
     </div>
@@ -291,7 +290,6 @@ function miniBadges(s) {
 }
 
 function maybeEnableNextRound() {
-  // total matches that require vote = floor(n/2)
   const totalNeedVote = Math.floor(currentRound.length / 2);
   const playedThisRound = matchResults.filter(r => r.roundIndex === roundIndex).length;
 
@@ -300,8 +298,7 @@ function maybeEnableNextRound() {
   }
 }
 
-/* -------- Vote modal (slideshow: 1 criterion at a time) -------- */
-
+/* -------- Vote (slideshow) -------- */
 function openVote(a, b, matchIdx) {
   currentMatch = {
     a, b, matchIdx,
@@ -360,50 +357,41 @@ function renderVoteSlide() {
     </div>
   `;
 
-  // handlers
   $("pickA").onclick = () => pickWinner("A");
   $("pickB").onclick = () => pickWinner("B");
-
   $("modalStatus").textContent = "";
 }
 
 function pickWinner(which) {
-  if (!currentMatch) return;
-
   const s = currentMatch.step;
-  if (currentMatch.picks[s]) return; // already selected for this step
+  if (currentMatch.picks[s]) return;
 
   currentMatch.picks[s] = which;
   if (which === "A") currentMatch.scoreA += 1;
   else currentMatch.scoreB += 1;
 
-  // advance to next slide or finish
   if (currentMatch.step < CRITERES.length - 1) {
     currentMatch.step += 1;
     renderVoteSlide();
     return;
   }
 
-  // finished all 5 criteria
   $("modalStatus").textContent = `Vote terminé — Score final : ${currentMatch.scoreA}–${currentMatch.scoreB}`;
   $("btnValidate").disabled = false;
 }
 
 function validateMatch() {
-  if (!currentMatch) return;
+  const { a, b, scoreA, scoreB, matchIdx } = currentMatch;
 
-  const { a, b, scoreA, scoreB } = currentMatch;
-
-  // winner by score (no tie possible with 5 criteria, but safe-guard)
   let winner = a;
   let loser = b;
   if (scoreB > scoreA) { winner = b; loser = a; }
 
   winners.push(winner);
 
-  // store results
   matchResults.push({
     roundIndex,
+    matchIdx,
     aName: a.name,
     bName: b.name,
     scoreA,
@@ -412,24 +400,22 @@ function validateMatch() {
     loserName: loser.name
   });
 
-  // update score pill in round view
-  const scoreEl = document.querySelector(`#score-${roundIndex}-${currentMatch.matchIdx}`);
+  // semi / finale pour podium
+  const totalMatchesThisRound = Math.floor(currentRound.length / 2);
+  if (totalMatchesThisRound === 2) semifinalLosers.push(loser);
+  if (totalMatchesThisRound === 1) lastFinal = { winner, loser, scoreA, scoreB, a, b };
+
+  // update UI (score + done)
+  const scoreEl = document.querySelector(`#score-${roundIndex}-${matchIdx}`);
   if (scoreEl) scoreEl.textContent = `${scoreA}–${scoreB}`;
 
-  // detect semi-finals and final for podium
-  const remainingAfterThisRound = Math.ceil(currentRound.length / 2);
-  // If this round had 4 matches -> winners 4, it was "quarter"
-  // If this round produces 2 winners -> it was semi (2 matches)
-  // If produces 1 winner -> final (1 match)
-  const totalMatchesThisRound = Math.floor(currentRound.length / 2);
+  const matchCard = document.querySelector(`#match-${roundIndex}-${matchIdx}`);
+  if (matchCard) matchCard.classList.add("done");
 
-  // if semi-final round (totalMatchesThisRound === 2), store losers for 3rd ex-aequo
-  if (totalMatchesThisRound === 2) {
-    semifinalLosers.push(loser);
-  }
-  // if final round (totalMatchesThisRound === 1), store final match info
-  if (totalMatchesThisRound === 1) {
-    lastFinal = { winner, loser, scoreA, scoreB, a, b };
+  const voteBtn = document.querySelector(`#vote-${roundIndex}-${matchIdx}`);
+  if (voteBtn) {
+    voteBtn.textContent = "Voté";
+    voteBtn.disabled = true;
   }
 
   $("modal").classList.add("hidden");
@@ -439,16 +425,13 @@ function validateMatch() {
 }
 
 /* -------- Next rounds & podium -------- */
-
 function nextRound() {
-  // if we already have 1 winner, tournament ends
   if (winners.length === 1) {
     renderPodium(winners[0]);
     show("screenWinner");
     return;
   }
 
-  // build next round teams: winners + BYE winners already included in winners
   currentRound = [...winners];
   winners = [];
   roundIndex += 1;
@@ -461,7 +444,6 @@ function renderPodium(champion) {
   const champName = champion?.name || "—";
   const runnerUp = lastFinal?.loser?.name || "—";
 
-  // Third: if semifinal losers exist, show both (ex-aequo)
   let thirdText = "—";
   if (semifinalLosers.length >= 2) {
     thirdText = `${semifinalLosers[0].name} / ${semifinalLosers[1].name}`;
@@ -469,7 +451,6 @@ function renderPodium(champion) {
     thirdText = semifinalLosers[0].name;
   }
 
-  // Also show final score if we have it
   const finalScore = lastFinal
     ? `${lastFinal.a.name} vs ${lastFinal.b.name} : ${lastFinal.scoreA}–${lastFinal.scoreB}`
     : "";
@@ -500,9 +481,7 @@ function renderPodium(champion) {
 }
 
 /* -------- Utilities -------- */
-
 function shuffle(arr) {
-  // Fisher–Yates
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [arr[i], arr[j]] = [arr[j], arr[i]];
@@ -520,7 +499,6 @@ function escapeHtml(str) {
 }
 
 /* -------- Events -------- */
-
 $("btnAdd").onclick = () => addStartup();
 $("btnDemo").onclick = () => {
   startups = [];
@@ -532,7 +510,7 @@ $("btnDemo").onclick = () => {
 $("btnClear").onclick = () => { startups = []; renderStartups(); };
 $("btnStart").onclick = startTournament;
 $("btnNextRound").onclick = nextRound;
-$("btnBack").onclick = () => show("screenSetup");
+$("btnBack").onclick = () => show("screenSetup"); // ✅ texte "Retour" côté UI (bouton reste le même id)
 $("btnReset").onclick = () => location.reload();
 $("btnRestart").onclick = () => location.reload();
 $("btnBackSetup").onclick = () => show("screenSetup");
