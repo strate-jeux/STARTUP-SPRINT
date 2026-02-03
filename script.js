@@ -400,6 +400,20 @@ function validateMatch() {
     loserName: loser.name
   });
 
+  // ✅ Ajouter/mettre à jour le badge "Gagnant" dans la carte du match
+const vsBox = document.querySelector(`#match-${roundIndex}-${matchIdx} .vs`);
+if (vsBox) {
+  // Supprime un ancien badge gagnant s'il existe
+  const oldWinner = vsBox.querySelector(".winner-badge");
+  if (oldWinner) oldWinner.remove();
+
+  // Ajoute le nouveau badge
+  const badge = document.createElement("div");
+  badge.className = "winner-badge";
+  badge.textContent = `Gagnant : ${winner.name}`;
+  vsBox.appendChild(badge);
+}
+
   // semi / finale pour podium
   const totalMatchesThisRound = Math.floor(currentRound.length / 2);
   if (totalMatchesThisRound === 2) semifinalLosers.push(loser);
