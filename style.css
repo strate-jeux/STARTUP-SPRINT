@@ -1,7 +1,6 @@
 :root{
   --bg:#0b1220;
   --panel: rgba(255,255,255,.06);
-  --panel2: rgba(255,255,255,.10);
   --border: rgba(255,255,255,.14);
   --text:#eaf0ff;
   --muted: rgba(234,240,255,.72);
@@ -12,8 +11,6 @@
   --red:#ef4444;
 
   --good:#22c55e;
-  --warn:#f59e0b;
-
   --shadow: 0 20px 60px rgba(0,0,0,.45);
   --radius: 22px;
 }
@@ -34,6 +31,7 @@ body{
 
 .hidden{display:none!important}
 
+/* -------- HEADER -------- */
 .topbar{
   position:sticky; top:0; z-index:5;
   display:flex; align-items:center; justify-content:space-between;
@@ -42,7 +40,6 @@ body{
   border-bottom:1px solid rgba(255,255,255,.12);
   backdrop-filter: blur(10px);
 }
-
 .brand{display:flex; gap:14px; align-items:center}
 .logo{
   width:52px; height:52px; border-radius:16px;
@@ -54,10 +51,11 @@ body{
 .title{font-size:26px; font-weight:900; letter-spacing:.5px}
 .subtitle{font-size:14px; opacity:.9}
 
+/* -------- LAYOUT -------- */
 .container{
   max-width: 1280px;
   margin: 0 auto;
-  padding: 26px 20px 60px;
+  padding: 26px 20px 120px; /* + bas pour laisser la place aux boutons fixes */
 }
 
 .panel{
@@ -72,7 +70,7 @@ body{
 
 h1{
   margin:0 0 10px;
-  font-size: clamp(28px, 3vw, 44px);
+  font-size: clamp(28px, 3vw, 46px);
   font-weight: 900;
   letter-spacing:.4px;
 }
@@ -106,6 +104,7 @@ h1{
   max-width: 700px;
 }
 
+/* -------- BUTTONS -------- */
 .btn{
   border:1px solid rgba(255,255,255,.14);
   background: rgba(255,255,255,.10);
@@ -121,10 +120,13 @@ h1{
 .btn:active{transform: translateY(0px) scale(.99)}
 .btn:disabled{opacity:.45; cursor:not-allowed}
 
+/* ✅ Primary = BLEU UNI (pas dégradé) */
 .btn.primary{
-  background: linear-gradient(90deg, rgba(30,58,138,.95), rgba(236,72,153,.90));
+  background: var(--blue-dark);
   border:1px solid rgba(255,255,255,.18);
 }
+.btn.primary:hover{background: rgba(30,58,138,.92);}
+
 .btn.danger{background: rgba(239,68,68,.92); border:1px solid rgba(255,255,255,.18)}
 .btn.ghost{background: transparent; border:1px solid rgba(255,255,255,.18)}
 .btn.big{
@@ -132,8 +134,7 @@ h1{
   font-size: 18px;
 }
 
-/* ---------- SETUP CARDS ---------- */
-
+/* -------- SETUP CARDS -------- */
 .grid{
   display:grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
@@ -181,37 +182,45 @@ h1{
   letter-spacing: .3px;
 }
 
+/* ✅ ICONS bigger + positioned under text (within same chip) */
 .icon-row{
   display:flex;
   gap: 10px;
   flex-wrap: wrap;
-  margin: 10px 0 6px;
+  margin: 12px 0 6px;
 }
 
-/* icon “chips” very visible */
 .chip{
   display:flex;
-  align-items:center;
+  flex-direction: column;   /* ✅ text then icon below */
+  align-items: center;
+  justify-content: center;
   gap: 10px;
-  padding: 10px 12px;
-  border-radius: 999px;
+  padding: 12px 14px;
+  border-radius: 18px;
   border: 1px solid rgba(255,255,255,.14);
   background: rgba(255,255,255,.08);
   font-weight: 900;
+  min-width: 160px;
+  text-align:center;
 }
 
 .chip img{
-  width: 28px;
-  height: 28px;
+  width: 44px;             /* ✅ bigger icons */
+  height: 44px;
   object-fit: contain;
+  order: 2;
+}
+
+.chip span{
+  order: 1;
 }
 
 .chip.theme{background: rgba(30,58,138,.35)}
 .chip.cible{background: rgba(147,197,253,.35)}
 .chip.contrainte{background: rgba(239,68,68,.32)}
 
-/* ---------- ROUND VIEW (matches) ---------- */
-
+/* -------- ROUND VIEW -------- */
 .round-head{
   display:flex;
   justify-content:space-between;
@@ -221,24 +230,45 @@ h1{
   margin-bottom: 14px;
 }
 
+/* On garde la place mais on fixe les boutons en bas */
 .round-actions{display:flex; gap:10px; flex-wrap:wrap}
+
+#btnBack{
+  position: fixed;
+  left: 18px;
+  bottom: 18px;
+  z-index: 40;
+}
+
+#btnNextRound{
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 40;
+}
 
 .matches{
   display:grid;
   gap: 16px;
 }
 
-/* Match card: LEFT vs RIGHT */
+/* Match layout: left vs right */
 .match{
   border: 1px solid rgba(255,255,255,.14);
   background: rgba(255,255,255,.06);
   border-radius: 18px;
   padding: 16px;
+  transition: border .15s ease, background .15s ease;
+}
+
+.match.done{
+  border-color: rgba(34,197,94,.55);                /* ✅ match done */
+  background: rgba(34,197,94,.06);
 }
 
 .match-grid{
   display:grid;
-  grid-template-columns: 1fr 120px 1fr;
+  grid-template-columns: 1fr 140px 1fr;
   gap: 14px;
   align-items: stretch;
 }
@@ -260,7 +290,7 @@ h1{
 }
 
 .side .name{
-  font-size: 26px;
+  font-size: 28px;
   font-weight: 900;
   letter-spacing:.3px;
 }
@@ -280,7 +310,7 @@ h1{
 
 .vs .label{
   font-weight: 900;
-  font-size: 26px;
+  font-size: 28px;
   letter-spacing: 2px;
 }
 
@@ -291,6 +321,20 @@ h1{
   border: 1px solid rgba(255,255,255,.14);
   font-weight: 900;
   font-size: 18px;
+}
+
+.done-tag{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(34,197,94,.18);
+  border: 1px solid rgba(34,197,94,.45);
+  color: rgba(234,240,255,.95);
+  font-weight: 900;
+  font-size: 12px;
+  letter-spacing: .3px;
 }
 
 .match-foot{
@@ -304,8 +348,10 @@ h1{
 
 .smallmuted{color: var(--muted); font-size: 13px}
 
-/* ---------- MODAL (vote as slideshow) ---------- */
+/* Mini badges in match cards */
+.mini{display:flex; gap:10px; flex-wrap:wrap}
 
+/* -------- MODAL (vote as slideshow) -------- */
 .modal{
   position:fixed; inset:0;
   background: rgba(0,0,0,.62);
@@ -313,7 +359,7 @@ h1{
   align-items:center;
   justify-content:center;
   padding: 18px;
-  z-index: 20;
+  z-index: 60;
 }
 
 .modal-card{
@@ -394,7 +440,6 @@ h1{
 
 .pick:hover{transform: translateY(-1px); background: rgba(255,255,255,.10)}
 .pick .name{font-size: 28px; font-weight: 900}
-.pick .mini{display:flex; gap: 10px; flex-wrap:wrap}
 
 .pick.selected{
   outline: 3px solid rgba(34,197,94,.9);
@@ -407,6 +452,7 @@ h1{
   align-items:center;
   color: rgba(255,255,255,.80);
   font-weight: 800;
+  flex-wrap: wrap;
 }
 
 .progress .dot{
@@ -415,8 +461,7 @@ h1{
 }
 .progress .dot.on{background: rgba(236,72,153,.95)}
 
-/* ---------- WINNER & PODIUM ---------- */
-
+/* -------- WINNER & PODIUM -------- */
 .podium{
   display:grid;
   grid-template-columns: 1fr 1fr 1fr;
@@ -454,12 +499,11 @@ h1{
 .place.second{background: rgba(147,197,253,.16); min-height: 190px}
 .place.third{background: rgba(239,68,68,.14); min-height: 170px}
 
-/* ---------- TOAST ---------- */
-
+/* -------- TOAST -------- */
 .toast{
   position: fixed;
   right: 18px;
-  bottom: 18px;
+  bottom: 82px; /* pour ne pas gêner les boutons fixés */
   padding: 12px 14px;
   border-radius: 14px;
   background: rgba(30,58,138,.92);
@@ -467,5 +511,5 @@ h1{
   color: white;
   font-weight: 900;
   box-shadow: var(--shadow);
-  z-index: 50;
+  z-index: 70;
 }
