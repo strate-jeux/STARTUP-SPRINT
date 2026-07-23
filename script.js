@@ -13,7 +13,6 @@ const CRITERES = [
 ];
 
 // ⚠️ Adapte ces chemins si tes fichiers sont ailleurs.
-// Ici, on suppose que tes images sont dans /assets/ (comme sur ta capture)
 const ICONS = {
   theme: {
     "Sport": "assets/items/theme-sport.png",
@@ -23,7 +22,7 @@ const ICONS = {
     "Nature": "assets/items/theme-nature.png",
   },
   cible: {
-    "Retraités": "assets/items/cible-retraites.png",  // ⚠️ sans accent recommandé
+    "Retraités": "assets/items/cible-retraites.png",
     "Étudiants": "assets/items/cible-etudiants.png",
     "Familles avec jeunes enfants": "assets/items/cible-familles.png",
     "Cadres dynamiques": "assets/items/cible-cadres.png",
@@ -39,14 +38,21 @@ const ICONS = {
 };
 
 let startups = [];
+
+// -------- Tournoi --------
 let currentRound = [];
 let roundIndex = 1;
-
 let winners = [];
-let currentMatch = null;
 
-// Résultats par match (pour affichage score + état terminé)
-let matchResults = []; // { roundIndex, matchIdx, aName, bName, scoreA, scoreB, winnerName, loserName }
+// Duel affiché un à la fois
+let matchPairs = [];   // [{ a, b|null, idx }]
+let matchCursor = 0;
+let uiPhase = "preview"; // 'preview' | 'vote' | 'result' | 'bye'
+let voteState = null;    // { a, b, step, scoreA, scoreB }
+let pendingResult = null; // { winner, loser, scoreA, scoreB, a, b }
+
+// Historique (podium)
+let matchResults = [];
 let semifinalLosers = [];
 let lastFinal = null;
 
@@ -80,27 +86,12 @@ function iconForTheme(theme) { return ICONS.theme[theme] || ""; }
 function iconForCible(cible) { return ICONS.cible[cible] || ""; }
 function iconForContrainte(con) { return ICONS.contrainte[con] || ""; }
 
-function renderIconChips(s) {
-  const con = s.contrainte;
+function optionChip(value, selected, icon) {
   return `
-    <div class="icon-row">
-      <div class="chip theme" title="Thème">
-        <span>${escapeHtml(s.theme)}</span>
-        <img alt="" src="${iconForTheme(s.theme)}">
-      </div>
-      <div class="chip cible" title="Cible">
-        <span>${escapeHtml(s.cible)}</span>
-        <img alt="" src="${iconForCible(s.cible)}">
-      </div>
-      ${
-        con !== "Aucune"
-          ? `<div class="chip contrainte" title="Contrainte">
-               <span>${escapeHtml(con)}</span>
-               <img alt="" src="${iconForContrainte(con)}">
-             </div>`
-          : ``
-      }
-    </div>
+    <button class="option-chip ${selected ? "selected" : ""}" type="button" data-value="${escapeHtml(value)}">
+      ${icon ? `<img alt="" src="${icon}">` : ""}
+      <span>${escapeHtml(value)}</span>
+    </button>
   `;
 }
 
@@ -114,22 +105,26 @@ function renderStartups() {
     div.innerHTML = `
       <div class="card-head">
         <div class="card-index">START-UP #${i + 1}</div>
-        <button class="btn danger" type="button" data-del="${i}">Supprimer</button>
+        <button class="icon-btn danger" type="button" data-del="${i}" aria-label="Supprimer" title="Supprimer">✕</button>
       </div>
 
       <label>Nom</label>
       <input placeholder="Nom de la start-up" value="${escapeHtml(s.name)}">
 
-      ${renderIconChips(s)}
-
       <label>Thème</label>
-      <select>${THEMES.map(t => `<option ${t===s.theme?"selected":""}>${t}</option>`).join("")}</select>
+      <div class="option-row" data-group="theme">
+        ${THEMES.map(t => optionChip(t, t === s.theme, iconForTheme(t))).join("")}
+      </div>
 
       <label>Cible</label>
-      <select>${CIBLES.map(c => `<option ${c===s.cible?"selected":""}>${c}</option>`).join("")}</select>
+      <div class="option-row" data-group="cible">
+        ${CIBLES.map(c => optionChip(c, c === s.cible, iconForCible(c))).join("")}
+      </div>
 
       <label>Contrainte (facultatif)</label>
-      <select>${CONTRAINTES.map(c => `<option ${c===s.contrainte?"selected":""}>${c}</option>`).join("")}</select>
+      <div class="option-row" data-group="contrainte">
+        ${CONTRAINTES.map(c => optionChip(c, c === s.contrainte, iconForContrainte(c))).join("")}
+      </div>
     `;
 
     div.querySelector("[data-del]").onclick = () => {
@@ -137,16 +132,17 @@ function renderStartups() {
       renderStartups();
     };
 
-    const inputs = div.querySelectorAll("input, select");
-    const name = inputs[0];
-    const theme = inputs[1];
-    const cible = inputs[2];
-    const contrainte = inputs[3];
+    div.querySelector("input").oninput = (e) => { s.name = e.target.value; };
 
-    name.oninput = (e) => { s.name = e.target.value; };
-    theme.onchange = (e) => { s.theme = e.target.value; renderStartups(); };
-    cible.onchange = (e) => { s.cible = e.target.value; renderStartups(); };
-    contrainte.onchange = (e) => { s.contrainte = e.target.value; renderStartups(); };
+    div.querySelectorAll(".option-row").forEach((row) => {
+      const group = row.dataset.group;
+      row.querySelectorAll(".option-chip").forEach((btn) => {
+        btn.onclick = () => {
+          s[group] = btn.dataset.value;
+          renderStartups();
+        };
+      });
+    });
 
     list.appendChild(div);
   });
@@ -155,7 +151,7 @@ function renderStartups() {
 /* -------- Tournament -------- */
 function startTournament() {
   const valid = startups
-    .map(s => ({...s, name: (s.name || "").trim()}))
+    .map(s => ({ ...s, name: (s.name || "").trim() }))
     .filter(s => s.name.length > 0);
 
   if (valid.length < 2) {
@@ -164,294 +160,198 @@ function startTournament() {
   }
 
   currentRound = shuffle([...valid]);
-  winners = [];
   matchResults = [];
   semifinalLosers = [];
   lastFinal = null;
   roundIndex = 1;
 
-  renderRound();
+  beginRound();
   show("screenRound");
 }
 
-function renderRound() {
-  $("roundTitle").textContent = `TOUR ${roundIndex}`;
-  $("btnNextRound").disabled = true;
+function buildMatchPairs(round) {
+  const pairs = [];
+  for (let i = 0; i < round.length; i += 2) {
+    pairs.push({ a: round[i], b: round[i + 1] || null, idx: i });
+  }
+  return pairs;
+}
 
-  const m = $("matches");
-  m.innerHTML = "";
+function beginRound() {
+  matchPairs = buildMatchPairs(currentRound);
   winners = [];
-
-  for (let i = 0; i < currentRound.length; i += 2) {
-    const a = currentRound[i];
-    const b = currentRound[i + 1];
-
-    const wrap = document.createElement("div");
-    wrap.className = "match";
-    wrap.id = `match-${roundIndex}-${i}`;
-
-    if (!b) {
-      winners.push(a);
-      wrap.innerHTML = `
-        <div class="match-grid">
-          <div class="side">
-            <div class="name">${escapeHtml(a.name)}</div>
-            ${miniBadges(a)}
-          </div>
-          <div class="vs">
-            <div class="label">BYE</div>
-            <div class="smallmuted">Passe automatiquement</div>
-            <div class="score-pill">—</div>
-          </div>
-          <div class="side">
-            <div class="name">—</div>
-            <div class="smallmuted">Aucun adversaire</div>
-          </div>
-        </div>
-        <div class="match-foot">
-          <div class="smallmuted">Match non joué</div>
-          <div class="smallmuted">Avance : <strong>${escapeHtml(a.name)}</strong></div>
-        </div>
-      `;
-      m.appendChild(wrap);
-      continue;
-    }
-
-    const existing = matchResults.find(r => r.roundIndex === roundIndex && r.matchIdx === i);
-
-    const scoreText = existing ? `${existing.scoreA}–${existing.scoreB}` : `0–0`;
-    const doneTag = existing
-  ? `<div class="done-tag">Terminé</div>
-     <div class="winner-badge">Gagnant : ${escapeHtml(existing.winnerName)}</div>`
-  : `<div class="smallmuted">5 critères</div>`;
-
-
-    wrap.innerHTML = `
-      <div class="match-grid">
-        <div class="side">
-          <div class="name">${escapeHtml(a.name)}</div>
-          ${miniBadges(a)}
-        </div>
-
-        <div class="vs">
-          <div class="label">VS</div>
-          <div class="score-pill" id="score-${roundIndex}-${i}">${scoreText}</div>
-          ${doneTag}
-        </div>
-
-        <div class="side">
-          <div class="name">${escapeHtml(b.name)}</div>
-          ${miniBadges(b)}
-        </div>
-      </div>
-
-      <div class="match-foot">
-        <div class="smallmuted">${existing ? "Match terminé" : "Clique pour voter sur ce duel"}</div>
-        <button class="btn primary" type="button" id="vote-${roundIndex}-${i}" ${existing ? "disabled" : ""}>
-          ${existing ? "Voté" : "Voter"}
-        </button>
-      </div>
-    `;
-
-    if (existing) {
-      wrap.classList.add("done");
-    } else {
-      wrap.querySelector(`#vote-${roundIndex}-${i}`).onclick = () => openVote(a, b, i);
-    }
-
-    m.appendChild(wrap);
-  }
-
-  maybeEnableNextRound();
+  matchCursor = 0;
+  goToCursorOrRoundEnd();
 }
 
-function miniBadges(s) {
-  const con = s.contrainte;
-  const conHtml = con !== "Aucune"
-    ? `<span class="chip contrainte" style="padding:10px 12px; min-width:160px">
-         <span>${escapeHtml(con)}</span>
-         <img alt="" src="${iconForContrainte(con)}">
-       </span>`
-    : "";
-
-  return `
-    <div class="mini">
-      <span class="chip theme" style="padding:10px 12px; min-width:160px">
-        <span>${escapeHtml(s.theme)}</span>
-        <img alt="" src="${iconForTheme(s.theme)}">
-      </span>
-      <span class="chip cible" style="padding:10px 12px; min-width:160px">
-        <span>${escapeHtml(s.cible)}</span>
-        <img alt="" src="${iconForCible(s.cible)}">
-      </span>
-      ${conHtml}
-    </div>
-  `;
-}
-
-function maybeEnableNextRound() {
-  const totalNeedVote = Math.floor(currentRound.length / 2);
-  const playedThisRound = matchResults.filter(r => r.roundIndex === roundIndex).length;
-
-  if (playedThisRound >= totalNeedVote) {
-    $("btnNextRound").disabled = false;
-  }
-}
-
-/* -------- Vote (slideshow) -------- */
-function openVote(a, b, matchIdx) {
-  currentMatch = {
-    a, b, matchIdx,
-    step: 0,
-    scoreA: 0,
-    scoreB: 0,
-    picks: new Array(CRITERES.length).fill(null)
-  };
-
-  $("modalSubtitle").textContent = `${a.name} vs ${b.name}`;
-  $("modal").classList.remove("hidden");
-
-  renderVoteSlide();
-  $("btnValidate").disabled = true;
-  $("modalStatus").textContent = "";
-}
-
-function renderVoteSlide() {
-  const { a, b, step, scoreA, scoreB } = currentMatch;
-  const [title, question] = CRITERES[step];
-
-  const dots = CRITERES.map((_, i) => `<span class="dot ${i<=step ? "on":""}"></span>`).join("");
-
-  $("modalBody").innerHTML = `
-    <div class="progress">
-      <span>Critère ${step + 1}/5</span>
-      <span style="opacity:.6">•</span>
-      <span>${escapeHtml(title)}</span>
-      <span style="opacity:.6">•</span>
-      <span>Score: ${scoreA}–${scoreB}</span>
-      <span style="opacity:.6">•</span>
-      <span>${dots}</span>
-    </div>
-
-    <div class="vote-slide" style="margin-top:12px">
-      <div class="question">
-        <div class="kicker">${escapeHtml(title)}</div>
-        <div class="q">${escapeHtml(question)}</div>
-      </div>
-
-      <div class="pick" id="pickA" role="button" tabindex="0">
-        <div>
-          <div class="name">${escapeHtml(a.name)}</div>
-          ${miniBadges(a)}
-        </div>
-        <div class="smallmuted">Cliquer pour attribuer le point</div>
-      </div>
-
-      <div class="pick" id="pickB" role="button" tabindex="0">
-        <div>
-          <div class="name">${escapeHtml(b.name)}</div>
-          ${miniBadges(b)}
-        </div>
-        <div class="smallmuted">Cliquer pour attribuer le point</div>
-      </div>
-    </div>
-  `;
-
-  $("pickA").onclick = () => pickWinner("A");
-  $("pickB").onclick = () => pickWinner("B");
-  $("modalStatus").textContent = "";
-}
-
-function pickWinner(which) {
-  const s = currentMatch.step;
-  if (currentMatch.picks[s]) return;
-
-  currentMatch.picks[s] = which;
-  if (which === "A") currentMatch.scoreA += 1;
-  else currentMatch.scoreB += 1;
-
-  if (currentMatch.step < CRITERES.length - 1) {
-    currentMatch.step += 1;
-    renderVoteSlide();
+function goToCursorOrRoundEnd() {
+  if (matchCursor >= matchPairs.length) {
+    finishRound();
     return;
   }
-
-  $("modalStatus").textContent = `Vote terminé — Score final : ${currentMatch.scoreA}–${currentMatch.scoreB}`;
-  $("btnValidate").disabled = false;
-}
-
-function validateMatch() {
-  const { a, b, scoreA, scoreB, matchIdx } = currentMatch;
-
-  let winner = a;
-  let loser = b;
-  if (scoreB > scoreA) { winner = b; loser = a; }
-
-  winners.push(winner);
-
-  matchResults.push({
-    roundIndex,
-    matchIdx,
-    aName: a.name,
-    bName: b.name,
-    scoreA,
-    scoreB,
-    winnerName: winner.name,
-    loserName: loser.name
-  });
-
-  // ✅ Ajouter/mettre à jour le badge "Gagnant" dans la carte du match
-const vsBox = document.querySelector(`#match-${roundIndex}-${matchIdx} .vs`);
-if (vsBox) {
-  // Supprime un ancien badge gagnant s'il existe
-  const oldWinner = vsBox.querySelector(".winner-badge");
-  if (oldWinner) oldWinner.remove();
-
-  // Ajoute le nouveau badge
-  const badge = document.createElement("div");
-  badge.className = "winner-badge";
-  badge.textContent = `Gagnant : ${winner.name}`;
-  vsBox.appendChild(badge);
-}
-
-  // semi / finale pour podium
-  const totalMatchesThisRound = Math.floor(currentRound.length / 2);
-  if (totalMatchesThisRound === 2) semifinalLosers.push(loser);
-  if (totalMatchesThisRound === 1) lastFinal = { winner, loser, scoreA, scoreB, a, b };
-
-  // update UI (score + done)
-  const scoreEl = document.querySelector(`#score-${roundIndex}-${matchIdx}`);
-  if (scoreEl) scoreEl.textContent = `${scoreA}–${scoreB}`;
-
-  const matchCard = document.querySelector(`#match-${roundIndex}-${matchIdx}`);
-  if (matchCard) matchCard.classList.add("done");
-
-  const voteBtn = document.querySelector(`#vote-${roundIndex}-${matchIdx}`);
-  if (voteBtn) {
-    voteBtn.textContent = "Voté";
-    voteBtn.disabled = true;
+  const pair = matchPairs[matchCursor];
+  if (!pair.b) {
+    winners.push(pair.a);
+    uiPhase = "bye";
+    renderMatchScreen();
+    return;
   }
-
-  $("modal").classList.add("hidden");
-  toast(`Gagnant : ${winner.name} (${scoreA}–${scoreB})`);
-
-  maybeEnableNextRound();
+  uiPhase = "preview";
+  renderMatchScreen();
 }
 
-/* -------- Next rounds & podium -------- */
-function nextRound() {
+function finishRound() {
   if (winners.length === 1) {
     renderPodium(winners[0]);
     show("screenWinner");
     return;
   }
-
   currentRound = [...winners];
-  winners = [];
   roundIndex += 1;
-  renderRound();
+  beginRound();
 }
 
+function continueToNext() {
+  matchCursor += 1;
+  goToCursorOrRoundEnd();
+}
+
+function startVote() {
+  const pair = matchPairs[matchCursor];
+  voteState = { a: pair.a, b: pair.b, step: 0, scoreA: 0, scoreB: 0 };
+  uiPhase = "vote";
+  renderMatchScreen();
+}
+
+function pickVoteWinner(which) {
+  if (which === "A") voteState.scoreA += 1; else voteState.scoreB += 1;
+
+  if (voteState.step < CRITERES.length - 1) {
+    voteState.step += 1;
+    renderMatchScreen();
+    return;
+  }
+
+  const { a, b, scoreA, scoreB } = voteState;
+  let winner = a, loser = b;
+  if (scoreB > scoreA) { winner = b; loser = a; }
+
+  const pair = matchPairs[matchCursor];
+  matchResults.push({
+    roundIndex, matchIdx: pair.idx,
+    aName: a.name, bName: b.name, scoreA, scoreB,
+    winnerName: winner.name, loserName: loser.name
+  });
+  winners.push(winner);
+
+  const totalMatchesThisRound = matchPairs.filter(p => p.b).length;
+  if (totalMatchesThisRound === 2) semifinalLosers.push(loser);
+  if (totalMatchesThisRound === 1) lastFinal = { winner, loser, scoreA, scoreB, a, b };
+
+  pendingResult = { winner, loser, scoreA, scoreB, a, b };
+  uiPhase = "result";
+  renderMatchScreen();
+}
+
+/* -------- Rendu du duel (un à la fois) -------- */
+function duelAttrs(s) {
+  const items = [
+    { cat: "theme", label: s.theme, icon: iconForTheme(s.theme) },
+    { cat: "cible", label: s.cible, icon: iconForCible(s.cible) },
+  ];
+  if (s.contrainte !== "Aucune") {
+    items.push({ cat: "contrainte", label: s.contrainte, icon: iconForContrainte(s.contrainte) });
+  }
+  return `
+    <div class="duel-attrs">
+      ${items.map(it => `
+        <div class="duel-attr ${it.cat}">
+          ${it.icon ? `<img alt="" src="${it.icon}">` : ""}
+          <span>${escapeHtml(it.label)}</span>
+        </div>
+      `).join("")}
+    </div>
+  `;
+}
+
+function renderMatchScreen() {
+  const stage = $("roundStage");
+  const pair = matchPairs[matchCursor];
+
+  if (uiPhase === "bye") {
+    stage.innerHTML = `
+      <div class="round-kicker">TOUR ${roundIndex}</div>
+      <h1>${escapeHtml(pair.a.name)} passe au tour suivant</h1>
+      <p class="muted">Aucun adversaire ce tour-ci pour cette start-up.</p>
+      <button class="btn primary big" id="btnContinue" type="button">Continuer</button>
+    `;
+    $("btnContinue").onclick = continueToNext;
+    return;
+  }
+
+  if (uiPhase === "preview") {
+    const totalMatches = matchPairs.filter(p => p.b).length;
+    const matchNumber = matchPairs.slice(0, matchCursor + 1).filter(p => p.b).length;
+    stage.innerHTML = `
+      <div class="round-kicker">TOUR ${roundIndex} — MATCH ${matchNumber}/${totalMatches}</div>
+      <div class="duel-grid">
+        <div class="duel-side left">
+          <div class="duel-name">${escapeHtml(pair.a.name)}</div>
+          ${duelAttrs(pair.a)}
+        </div>
+        <div class="vs-badge">VS</div>
+        <div class="duel-side right">
+          <div class="duel-name">${escapeHtml(pair.b.name)}</div>
+          ${duelAttrs(pair.b)}
+        </div>
+      </div>
+      <button class="btn primary big" id="btnStartVote" type="button">⚡ Commencer le vote</button>
+    `;
+    $("btnStartVote").onclick = startVote;
+    return;
+  }
+
+  if (uiPhase === "vote") {
+    const { a, b, step, scoreA, scoreB } = voteState;
+    const [title, question] = CRITERES[step];
+    const dots = CRITERES.map((_, i) => `<span class="vote-dot ${i < step ? "done" : i === step ? "current" : ""}"></span>`).join("");
+
+    stage.innerHTML = `
+      <div class="round-kicker">TOUR ${roundIndex} • Critère ${step + 1}/${CRITERES.length}</div>
+      <div class="vote-score"><span class="score-a">${scoreA}</span><span class="score-sep">–</span><span class="score-b">${scoreB}</span></div>
+      <div class="vote-dots">${dots}</div>
+      <h1 class="vote-title">${escapeHtml(title)}</h1>
+      <p class="muted vote-question">${escapeHtml(question)}</p>
+      <div class="vote-pills">
+        <button class="vote-pill left" type="button" id="pickA">${escapeHtml(a.name)}</button>
+        <button class="vote-pill right" type="button" id="pickB">${escapeHtml(b.name)}</button>
+      </div>
+    `;
+    $("pickA").onclick = () => pickVoteWinner("A");
+    $("pickB").onclick = () => pickVoteWinner("B");
+    return;
+  }
+
+  if (uiPhase === "result") {
+    const { winner, scoreA, scoreB } = pendingResult;
+    const isLastInRound = matchCursor + 1 >= matchPairs.length;
+    const nextLabel = isLastInRound
+      ? (winners.length === 1 ? "Voir le résultat final" : "Voir le tour suivant")
+      : "Match suivant";
+
+    stage.innerHTML = `
+      <div class="round-kicker">TOUR ${roundIndex}</div>
+      <div class="result-trophy">🏆</div>
+      <h1>${escapeHtml(winner.name)} remporte ce duel</h1>
+      <p class="muted">Score final : ${scoreA}–${scoreB}</p>
+      <button class="btn primary big" id="btnContinue" type="button">${nextLabel}</button>
+    `;
+    $("btnContinue").onclick = continueToNext;
+    return;
+  }
+}
+
+/* -------- Podium -------- */
 function renderPodium(champion) {
   const winnerCard = $("winnerCard");
 
@@ -505,33 +405,28 @@ function shuffle(arr) {
 
 function escapeHtml(str) {
   return String(str ?? "")
-    .replaceAll("&","&amp;")
-    .replaceAll("<","&lt;")
-    .replaceAll(">","&gt;")
-    .replaceAll('"',"&quot;")
-    .replaceAll("'","&#039;");
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }
 
 /* -------- Events -------- */
 $("btnAdd").onclick = () => addStartup();
 $("btnDemo").onclick = () => {
   startups = [];
-  addStartup({name:"FitNow", theme:"Sport", cible:"Étudiants", contrainte:"Plateforme numérique"});
-  addStartup({name:"GreenBox", theme:"Nature", cible:"Familles avec jeunes enfants", contrainte:"Moins de 10 €"});
-  addStartup({name:"SeniorCare", theme:"Santé", cible:"Retraités", contrainte:"Technologie innovante"});
-  addStartup({name:"CityFun", theme:"Divertissement", cible:"Jeunes urbains créatifs", contrainte:"Co-conception avec les utilisateurs"});
+  addStartup({ name: "FitNow", theme: "Sport", cible: "Étudiants", contrainte: "Plateforme numérique" });
+  addStartup({ name: "GreenBox", theme: "Nature", cible: "Familles avec jeunes enfants", contrainte: "Moins de 10 €" });
+  addStartup({ name: "SeniorCare", theme: "Santé", cible: "Retraités", contrainte: "Technologie innovante" });
+  addStartup({ name: "CityFun", theme: "Divertissement", cible: "Jeunes urbains créatifs", contrainte: "Co-conception avec les utilisateurs" });
 };
 $("btnClear").onclick = () => { startups = []; renderStartups(); };
 $("btnStart").onclick = startTournament;
-$("btnNextRound").onclick = nextRound;
-$("btnBack").onclick = () => show("screenSetup"); // ✅ texte "Retour" côté UI (bouton reste le même id)
+$("btnBack").onclick = () => show("screenSetup");
 $("btnReset").onclick = () => location.reload();
 $("btnRestart").onclick = () => location.reload();
 $("btnBackSetup").onclick = () => show("screenSetup");
-
-$("btnClose").onclick = () => $("modal").classList.add("hidden");
-$("btnCancel").onclick = () => $("modal").classList.add("hidden");
-$("btnValidate").onclick = validateMatch;
 
 /* init */
 addStartup();
