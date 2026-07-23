@@ -5,11 +5,11 @@ const CIBLES = ["Retraités", "Étudiants", "Familles avec jeunes enfants", "Cad
 const CONTRAINTES = ["Plateforme numérique", "Moins de 10 €", "Co-conception avec les utilisateurs", "Technologie innovante", "Aucune"];
 
 const CRITERES = [
-  ["Originalité", "Quelle idée est la plus originale, différente de ce qui existe déjà ?"],
-  ["Adéquation à la cible", "Quelle start-up répond le mieux aux besoins de sa cible ?"],
-  ["Faisabilité", "Laquelle semble la plus réaliste à lancer concrètement ?"],
-  ["Modèle économique", "Laquelle a le meilleur potentiel pour gagner de l’argent ?"],
-  ["Impact", "Laquelle a l’impact le plus positif (social, environnemental, sociétal) ?"]
+  ["Originalité", "Quelle idée est la plus originale, différente de ce qui existe déjà ?", "⭐"],
+  ["Adéquation à la cible", "Quelle start-up répond le mieux aux besoins de sa cible ?", "🎯"],
+  ["Faisabilité", "Laquelle semble la plus réaliste à lancer concrètement ?", "🛠️"],
+  ["Modèle économique", "Laquelle a le meilleur potentiel pour gagner de l’argent ?", "💰"],
+  ["Impact", "Laquelle a l’impact le plus positif (social, environnemental, sociétal) ?", "🌍"]
 ];
 
 // ⚠️ Adapte ces chemins si tes fichiers sont ailleurs.
@@ -313,13 +313,12 @@ function renderMatchScreen() {
 
   if (uiPhase === "vote") {
     const { a, b, step, scoreA, scoreB } = voteState;
-    const [title, question] = CRITERES[step];
-    const dots = CRITERES.map((_, i) => `<span class="vote-dot ${i < step ? "done" : i === step ? "current" : ""}"></span>`).join("");
+    const [title, question, icon] = CRITERES[step];
 
     stage.innerHTML = `
       <div class="round-kicker">TOUR ${roundIndex} • Critère ${step + 1}/${CRITERES.length}</div>
       <div class="vote-score"><span class="score-a">${scoreA}</span><span class="score-sep">–</span><span class="score-b">${scoreB}</span></div>
-      <div class="vote-dots">${dots}</div>
+      <div class="vote-icon">${icon}</div>
       <h1 class="vote-title">${escapeHtml(title)}</h1>
       <p class="muted vote-question">${escapeHtml(question)}</p>
       <div class="vote-pills">

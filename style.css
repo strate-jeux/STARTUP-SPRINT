@@ -378,10 +378,7 @@ h1{
 .score-sep{color: var(--muted); margin: 0 12px}
 .score-b{color: var(--pink)}
 
-.vote-dots{display:flex; gap:8px; justify-content:center; margin-bottom: 18px}
-.vote-dot{width:9px; height:9px; border-radius:999px; background: var(--border-strong)}
-.vote-dot.done{background: var(--good)}
-.vote-dot.current{background: var(--pink)}
+.vote-icon{font-size: 40px; line-height:1; margin-bottom: 10px}
 
 .vote-title{margin-bottom: 6px}
 .vote-question{max-width: 560px; margin: 0 auto 26px}
