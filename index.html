@@ -25,6 +25,8 @@
     </div>
 
     <div class="top-actions">
+      <button class="btn ghost icon" id="btnSoundTop" type="button" title="Activer / couper le son" aria-label="Son">🔊</button>
+      <button class="btn ghost icon" id="btnFullscreenTop" type="button" title="Plein écran (F)" aria-label="Plein écran">⛶</button>
       <button class="btn ghost" id="btnReset" type="button">Réinitialiser</button>
     </div>
   </header>
@@ -62,10 +64,12 @@
       <div class="panel">
         <div class="round-head">
           <div>
+            <div class="round-kicker" id="roundKicker">Tour 1</div>
             <h1 id="roundTitle">Tour 1</h1>
             <p class="muted">
-              Clique sur “Voter” pour chaque duel, puis valide le match. Quand tous les matchs sont validés, passe au tour suivant.
+              Clique sur “Voter” pour lancer le duel en plein écran. Quand tous les matchs sont validés, passe au tour suivant.
             </p>
+            <div class="round-progress" aria-hidden="true"><span id="roundProgressBar"></span></div>
           </div>
 
           <div class="round-actions">
@@ -86,38 +90,59 @@
 
         <div id="winnerCard" class="winner-card" aria-live="polite"></div>
 
+
         <div class="toolbar center">
           <button class="btn primary" id="btnRestart" type="button">Recommencer un tournoi</button>
           <button class="btn" id="btnBackSetup" type="button">Retour au setup</button>
         </div>
-
-        <div class="confetti" aria-hidden="true"></div>
       </div>
     </section>
 
   </main>
 
-  <!-- MODAL: VOTE MATCH -->
-  <div id="modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <!-- MODAL: VOTE MATCH (scène plein écran façon diaporama) -->
+  <div id="modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modalTitle" data-step="intro">
+    <div class="stage-bg" aria-hidden="true">
+      <span class="orb o1"></span><span class="orb o2"></span><span class="orb o3"></span>
+    </div>
+
     <div class="modal-card">
       <div class="modal-head">
         <div>
           <div class="modal-title" id="modalTitle">Vote du match</div>
           <div class="muted" id="modalSubtitle"></div>
         </div>
+        <div class="spacer"></div>
+        <button class="btn ghost icon" id="btnSound" type="button" title="Activer / couper le son" aria-label="Son">🔊</button>
+        <button class="btn ghost icon" id="btnFullscreen" type="button" title="Plein écran (F)" aria-label="Plein écran">⛶</button>
         <button class="btn ghost" id="btnClose" type="button">Fermer</button>
       </div>
+
+      <div id="scoreboard" class="scoreboard" aria-live="polite"></div>
 
       <div id="modalBody" class="modal-body"></div>
 
       <div class="modal-foot">
-        <div class="muted" id="modalStatus"></div>
+        <button class="btn" id="btnPrev" type="button">← Précédent</button>
+        <div class="muted keys" id="modalStatus"></div>
         <div class="spacer"></div>
         <button class="btn" id="btnCancel" type="button">Annuler</button>
         <button class="btn primary" id="btnValidate" type="button" disabled>Valider le match</button>
       </div>
     </div>
   </div>
+
+  <!-- Bandeau d'annonce de tour -->
+  <div id="roundBanner" class="round-banner hidden" aria-hidden="true">
+    <div class="rb-inner">
+      <div class="rb-kicker" id="rbKicker">Tour 1</div>
+      <div class="rb-title" id="rbTitle">Quarts de finale</div>
+      <div class="rb-sub" id="rbSub"></div>
+    </div>
+  </div>
+
+  <!-- Confettis -->
+  <canvas id="confetti" class="confetti-canvas" aria-hidden="true"></canvas>
 
   <!-- Toast -->
   <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
